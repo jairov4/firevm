@@ -4,13 +4,18 @@ Utility to create slim VM images from docker container images.
 The idea behind this is you can leverage the existing great tooling for docker images
 and get an incredible easy workflow to compose your VM images too.
 
+[![asciicast](https://asciinema.org/a/410067.svg)](https://asciinema.org/a/410067)
+
 Example:
 
 ```bash
 # We create our new VM definition via regular container tooling 
 docker build -t my-vm-template:latest .
 # We create our 200MB QCOW2 VM image from container image
-firevm my-vm-template:latest -s 200 -f qcow2 -o my-vm-template.qcow2  
+firevm my-vm-template:latest -s 200 -f qcow2 -o my-vm-template.qcow2
+# Launch our new VM
+sudo virt-install --name my-vm --ram 1024 --disk /my-vm-template.qcow2,bus=virtio \
+    --boot hd --network user --nographics --os-type linux --import --boot machine=q35
 ```
 
 # Requisites

@@ -8,7 +8,7 @@ import tempfile
 from contextlib import contextmanager
 from typing import List, Union, Iterable
 
-DEFAULT_KERNEL = 'weaveworks/ignite-kernel:4.19.183-amd64'
+DEFAULT_KERNEL = 'jairov4/firevm-kernel:4.19.183-amd64'
 
 
 def prepare_cmd_line(args: Iterable[Union[bytes, str]]) -> List[str]:
