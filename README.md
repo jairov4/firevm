@@ -32,10 +32,10 @@ The PoC was tested on CentOS 8.
 
 They are Docker images holding kernel compiled and ready to use
 
-- jairov4/firevm-kernel:5.10.25-amd64
-- jairov4/firevm-kernel:5.4.108-amd64
-- jairov4/firevm-kernel:4.19.183-amd64
-- jairov4/firevm-kernel:4.14.227-amd64
+- `jairov4/firevm-kernel:5.10.25-amd64`
+- `jairov4/firevm-kernel:5.4.108-amd64`
+- `jairov4/firevm-kernel:4.19.183-amd64`
+- `jairov4/firevm-kernel:4.14.227-amd64`
 
 # Compiling own kernel image
 
