@@ -5,6 +5,7 @@ import logging
 import os
 import subprocess
 import tempfile
+from contextlib import contextmanager
 from typing import List, Union, Iterable
 
 DEFAULT_KERNEL = 'weaveworks/ignite-kernel:4.19.183-amd64'
@@ -56,7 +57,7 @@ def main():
     parser.add_argument('image', help='Input Docker Image')
     parser.add_argument('-s', '--size', type=int, required=True, help='Size in MB')
     parser.add_argument('-o', '--output', required=True, help='Output filename')
-    parser.add_argument('-f', '--format', default='qcow2', help='Output format')
+    parser.add_argument('-f', '--format', default='raw', help='Output format')
     parser.add_argument('-k', '--kernel', default=DEFAULT_KERNEL,
                         help=f'Docker image for kernel. Default: {DEFAULT_KERNEL}')
     opts = parser.parse_args()
@@ -83,11 +84,10 @@ def main():
         export_container(kernel_img, kernel_tar)
         export_container(docker_image, rootfs_tar)
 
-        loop_device = mount_new_disk(mount_point, img_fn, size_mb)
-        sudo_exe('tar', 'xfC', kernel_tar, mount_point)
-        sudo_exe('tar', 'xfC', rootfs_tar, mount_point)
-        install_bootloader(mount_point, mbr_fn, init, init_args, loop_device)
-        unmount_disk(loop_device, mount_point)
+        with mount_new_disk(mount_point, img_fn, size_mb) as loop_device:
+            sudo_exe('tar', 'xfC', kernel_tar, mount_point)
+            sudo_exe('tar', 'xfC', rootfs_tar, mount_point)
+            install_bootloader(mount_point, mbr_fn, init, init_args, loop_device)
 
         logging.info('Convert disk image')
         if out_format == 'qcow2':
@@ -101,11 +101,6 @@ def main():
             exe('mv', img_fn, output)
 
         logging.info(f'Create image {output}')
-
-
-def unmount_disk(loop, mount_point):
-    sudo_exe('umount', mount_point)
-    sudo_exe('losetup', '-d', loop)
 
 
 def install_bootloader(mount_point, mbr_fn, init, init_args, loop):
@@ -124,6 +119,12 @@ def install_bootloader(mount_point, mbr_fn, init, init_args, loop):
     ]))
 
 
+def unmount_disk(loop, mount_point):
+    sudo_exe('umount', mount_point)
+    sudo_exe('losetup', '-d', loop)
+
+
+@contextmanager
 def mount_new_disk(mount_point: str, img_fn: str, size_mb: int):
     logging.info('Creating raw disk image')
     exe('dd', 'if=/dev/zero', f'of={img_fn}', 'bs=1M', f'count={size_mb}')
@@ -133,7 +134,8 @@ def mount_new_disk(mount_point: str, img_fn: str, size_mb: int):
     sudo_exe('mount', '-t', 'ext4', f'{loop}p1', mount_point)
     uuid = sudo_ex('blkid', '-o', 'value', '-s', 'UUID', f'{loop}p1').strip()
     logging.info(f'Partition UUID: {uuid}')
-    return loop
+    yield loop
+    unmount_disk(loop, mount_point)
 
 
 if __name__ == "__main__":
