@@ -78,7 +78,6 @@ def main():
         rootfs_tar = os.path.join(w, 'rootfs.tar.gz')
         mbr_fn = '/usr/share/syslinux/mbr.bin'
 
-        exe('rm', '-rf', w)
         exe('mkdir', '-p', mount_point)
 
         export_container(kernel_img, kernel_tar)
