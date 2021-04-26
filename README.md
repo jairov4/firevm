@@ -7,8 +7,10 @@ and get an incredible easy workflow to compose your VM images too.
 Example:
 
 ```bash
+# We create our new VM definition via regular container tooling 
 docker build -t my-vm-template:latest .
-firevm my-vm-template:latest 500 -f qcow2 -o my-vm-template.qcow2  
+# We create our 200MB QCOW2 VM image from container image
+firevm my-vm-template:latest -s 200 -f qcow2 -o my-vm-template.qcow2  
 ```
 
 # Requisites
