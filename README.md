@@ -33,6 +33,15 @@ range of hypervisors like KVM and Hyper-V.
 
 The PoC was tested on CentOS 8.
 
+### Filesystem interface
+
+Docker images can include the Linux kernel and optionally a linux kernel can be injected 
+by using the `--kernel` option and specifying a separated docker image for it.
+Any case, FireVM expects by default the following files:
+
+- Kernel image: `/boot/vmlinuz`
+- initramfs image (optional): `/boot/initramfs`
+
 # Available Kernel Images
 
 They are Docker images holding kernel compiled and ready to use
