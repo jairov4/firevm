@@ -30,10 +30,10 @@ RUN make ${ARCH_MAKE_PARAMS} EXTRAVERSION=${KERNEL_EXTRA} LOCALVERSION= modules_
 
 # VMLINUX_PATH is configurable, as the arm64 kernel to be booted is present
 # in arch/arm64/boot/Image.
-ARG VMLINUX_PATH="vmlinux"
+ARG VMLINUX_PATH=/boot/${ARCH}/bzImage
 RUN make ${ARCH_MAKE_PARAMS} EXTRAVERSION=${KERNEL_EXTRA} LOCALVERSION= bzImage
-RUN cp ${VMLINUX_PATH} /boot/vmlinux-${KERNEL_VERSION}${KERNEL_EXTRA} && \
-	ln -s /boot/vmlinux-${KERNEL_VERSION}${KERNEL_EXTRA} /boot/vmlinux && \
+RUN cp ${VMLINUX_PATH} /boot/vmlinuz-${KERNEL_VERSION}${KERNEL_EXTRA} && \
+	ln -s /boot/vmlinuz-${KERNEL_VERSION}${KERNEL_EXTRA} /boot/vmlinuz && \
 	cp .config /boot/config-${KERNEL_VERSION}${KERNEL_EXTRA}
 
 FROM scratch

@@ -15,7 +15,7 @@ docker build -t my-vm-template:latest .
 firevm my-vm-template:latest -s 200 -f qcow2 -o my-vm-template.qcow2
 # Launch our new VM
 sudo virt-install --name my-vm --ram 1024 --disk /my-vm-template.qcow2,bus=virtio \
-    --boot hd --network user --nographics --os-type linux --import --boot machine=q35
+    --boot hd --network user,model=virtio --nographics --os-type linux --import
 ```
 
 # Requisites
@@ -26,8 +26,8 @@ sudo virt-install --name my-vm --ram 1024 --disk /my-vm-template.qcow2,bus=virti
 
 # How works?
 
-This tool is inspired in Firecraker's Ignite project which provided a similar idea 
-focused on VMs targeted to run in Firecracker.
+FireVM tool is inspired in Firecraker's Ignite project which provided a similar idea 
+focused on VMs targeted to run in Firecracker only.
 Our goal in firevm is to ignite slim and generic cloud VM images suitable for a wider
 range of hypervisors like KVM and Hyper-V. 
 
@@ -47,4 +47,12 @@ They are Docker images holding kernel compiled and ready to use
 ```bash
 cd kernel
 make
+```
+
+# Troubleshooting
+
+Remember setup your file ACL in home directory for KVM usage to allow qemu user walk in.
+
+```bash
+sudo setfacl -m u:qemu:rx /home/$USER/ 
 ```

@@ -8,7 +8,8 @@ import tempfile
 from contextlib import contextmanager
 from typing import List, Union, Iterable
 
-DEFAULT_KERNEL = 'jairov4/firevm-kernel:4.19.183-amd64'
+DEFAULT_KERNEL = 'scratch'  # 'jairov4/firevm-kernel:4.19.183-amd64'
+DEFAULT_KERNEL_PATH = '/boot/vmlinuz'
 
 
 def prepare_cmd_line(args: Iterable[Union[bytes, str]]) -> List[str]:
@@ -58,6 +59,7 @@ def main():
     parser.add_argument('-s', '--size', type=int, required=True, help='Size in MB')
     parser.add_argument('-o', '--output', required=True, help='Output filename')
     parser.add_argument('-f', '--format', default='raw', help='Output format')
+    parser.add_argument('-p', '--kernel-path', default=DEFAULT_KERNEL_PATH)
     parser.add_argument('-k', '--kernel', default=DEFAULT_KERNEL,
                         help=f'Docker image for kernel. Default: {DEFAULT_KERNEL}')
     opts = parser.parse_args()
@@ -67,6 +69,7 @@ def main():
     output = opts.output
     out_format = opts.format
     kernel_img = opts.kernel
+    kernel = opts.kernel_path
 
     init, init_args = find_init_data(docker_image)
 
@@ -80,15 +83,14 @@ def main():
 
         exe('mkdir', '-p', mount_point)
 
-        export_container(kernel_img, kernel_tar)
+        export_container(kernel_img, kernel_tar) if kernel_img != 'scratch' else None
         export_container(docker_image, rootfs_tar)
 
         with mount_new_disk(mount_point, img_fn, size_mb) as loop_device:
-            sudo_exe('tar', 'xfC', kernel_tar, mount_point)
             sudo_exe('tar', 'xfC', rootfs_tar, mount_point)
-            install_bootloader(mount_point, mbr_fn, init, init_args, loop_device)
+            sudo_exe('tar', 'xfC', kernel_tar, mount_point) if kernel_img != 'scratch' else None
+            install_bootloader(mount_point, mbr_fn, init, init_args, loop_device, kernel)
 
-        logging.info('Convert disk image')
         if out_format == 'qcow2':
             logging.info('Converting image to QCOW2')
             exe('qemu-img', 'convert', '-f', 'raw', '-O', 'qcow2', img_fn, output)
@@ -99,12 +101,24 @@ def main():
             logging.info('Copying RAW image')
             exe('mv', img_fn, output)
 
-        logging.info(f'Create image {output}')
+        logging.info(f'Created image {output}')
 
 
-def install_bootloader(mount_point, mbr_fn, init, init_args, loop):
+def install_bootloader(mount_point, mbr_fn, init, init_args, loop, kernel):
     logging.info('Installing bootloader')
     init_args = ' '.join(init_args)
+    initramfs_file = 'boot/initramfs'
+    try:
+        sudo_ex('ls', os.path.join(mount_point, initramfs_file))
+        initrd = 'INITRD /' + initramfs_file
+        initrd_kp = 'initrd=/' + initramfs_file
+        logging.info(initrd)
+    except subprocess.CalledProcessError as e:
+        logging.exception(e)
+        logging.info('No initramfs detected')
+        initrd = ''
+        initrd_kp = ''
+
     sudo_exe('mkdir', '-p', f"{mount_point}/boot/syslinux")
     sudo_exe('extlinux', '--install', f"{mount_point}/boot/syslinux")
     sudo_exe('dd', 'bs=440', 'count=1', 'conv=notrunc', f'if={mbr_fn}', f'of={loop}')
@@ -112,14 +126,16 @@ def install_bootloader(mount_point, mbr_fn, init, init_args, loop):
         f'cat >> \'{mount_point}/boot/syslinux/syslinux.cfg\' <<EOF',
         f'DEFAULT linuxkernel',
         f'LABEL linuxkernel',
-        f'  LINUX /boot/vmlinux',
-        f'  APPEND ip=dhcp root=/dev/vda1 rw console=ttyS0 init={init} -- {init_args}',
+        f'  LINUX {kernel}',
+        f'  APPEND ip=dhcp root=/dev/vda1 rw console=ttyS0 {initrd_kp} init={init} -- {init_args}',
+        f'  {initrd}',
         f'EOF'
     ]))
 
 
 def unmount_disk(loop, mount_point):
-    sudo_exe('umount', mount_point)
+    logging.info('Un-mounting loop device')
+    sudo_exe('umount', '-f', mount_point)
     sudo_exe('losetup', '-d', loop)
 
 

@@ -34,3 +34,7 @@ build-%: kernel-builder
 		--build-arg GOARCH=${GOARCH} \
 		--build-arg ARCH_MAKE_PARAMS=${ARCH_MAKE_PARAMS} \
 		--build-arg VMLINUX_PATH=${VMLINUX_PATH} .
+
+push: $(addprefix push-,$(KERNEL_VERSIONS))
+push-%: build-%
+	$(DOCKER) push $(IMAGE_NAME):$*-${GOARCH}
